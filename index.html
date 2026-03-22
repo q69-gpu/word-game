@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="description" content="Word Chain Game — Challenge your vocabulary against Qbit the AI or a friend!">
+    <title>Word Chain Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header-row">
+            <h1><span class="emoji">🔗</span> Word Chain</h1>
+            <button id="muteBtn" class="icon-btn" onclick="toggleMute()" title="Mute">🔊</button>
+        </div>
+
+        <!-- Rules (collapsible) -->
+        <div class="rules-section" id="rulesSection">
+            <div class="rules-toggle" onclick="document.getElementById('rulesSection').classList.toggle('open')">
+                <span>📖 How to Play</span>
+                <span class="chevron">▼</span>
+            </div>
+            <div class="rules-content">
+                <ol>
+                    <li>Enter your name, pick a difficulty, time limit & min word length.</li>
+                    <li>Type a valid English word and submit it.</li>
+                    <li>Qbit responds with a word starting with the last letter of yours.</li>
+                    <li>Your next word must start with Qbit's last letter.</li>
+                    <li>No repeating words. Submit before the timer runs out!</li>
+                    <li>Earn power-ups: ❄️ Freeze, 💎 Double, 🔄 Skip, 🔤 Letter Pick!</li>
+                    <li>Use 🔤 Letter Pick to choose Qbit's starting letter!</li>
+                    <li>Tap any used word to see its definition.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Registration -->
+        <div id="playerRegistration" class="game-section glass-card">
+
+            <!-- Game Mode Tabs -->
+            <div class="mode-tabs">
+                <button class="mode-tab active" data-mode="qbit">🤖 vs Qbit</button>
+                <button class="mode-tab" data-mode="pvp">👥 vs Player</button>
+                <button class="mode-tab" data-mode="botvsbot">🤖🤖 Bot vs Bot</button>
+            </div>
+
+            <div class="form-group" id="player1Section">
+                <label for="playerName">Player 1</label>
+                <input type="text" id="playerName" placeholder="Enter your name" autocomplete="off">
+            </div>
+
+            <div class="form-group" id="player2Section" style="display:none">
+                <label for="player2Name">Player 2</label>
+                <input type="text" id="player2Name" placeholder="Enter player 2 name" autocomplete="off">
+            </div>
+
+            <div class="form-group" id="botSelectorSection">
+                <label for="botSelector">Select Bot</label>
+                <select id="botSelector">
+                    <option value="classic">🤖 Qbit Classic</option>
+                    <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
+                    <option value="qbit_v02">⚡ Qbit v0.2 (Weighted Greedy)</option>
+                </select>
+                <div id="botSelectorPreview" class="field-preview">🤖 Classic API-based bot</div>
+            </div>
+
+            <div id="botVsBotSelectorSection" style="display:none">
+                <div class="form-group">
+                    <label for="bot1Selector">🤖 Bot 1</label>
+                    <select id="bot1Selector">
+                        <option value="classic">🤖 Qbit Classic</option>
+                        <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
+                        <option value="qbit_v02">⚡ Qbit v0.2 (Weighted Greedy)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bot2Selector">🤖 Bot 2</label>
+                    <select id="bot2Selector">
+                        <option value="classic">🤖 Qbit Classic</option>
+                        <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
+                        <option value="qbit_v02" selected>⚡ Qbit v0.2 (Weighted Greedy)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="trainingSourceSection" style="display:none">
+                <label for="trainingSource">Training Data</label>
+                <select id="trainingSource">
+                    <option value="both">📊 User + Bot Data</option>
+                    <option value="user">👤 User Data Only</option>
+                    <option value="bot">🤖 Bot Data Only</option>
+                </select>
+                <div id="trainingSourcePreview" class="field-preview">Learns from all words played</div>
+            </div>
+
+            <div class="form-group" id="botSpeedSection" style="display:none">
+                <label for="botSpeed">Bot Speed</label>
+                <select id="botSpeed">
+                    <option value="3000">🐢 Slow (3s)</option>
+                    <option value="1500" selected>⚡ Normal (1.5s)</option>
+                    <option value="500">🚀 Fast (0.5s)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="difficulty">Difficulty</label>
+                <select id="difficulty">
+                    <option value="easy">🌿 Easy</option>
+                    <option value="normal" selected>⚡ Normal</option>
+                    <option value="hard">🔥 Hard</option>
+                </select>
+                <div id="difficultyPreview"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="minWordLength">Min Word Length</label>
+                <input type="number" id="minWordLength" min="1" max="45" value="1" placeholder="e.g. 3">
+                <div id="minLengthPreview" class="field-preview">Words of any length accepted</div>
+            </div>
+
+            <div class="form-group">
+                <label for="timeLimit">Time Limit</label>
+                <select id="timeLimit">
+                    <option value="30">30 Seconds</option>
+                    <option value="60">1 Minute</option>
+                    <option value="120">2 Minutes</option>
+                    <option value="180">3 Minutes</option>
+                    <option value="300">5 Minutes</option>
+                </select>
+            </div>
+
+            <button id="startGameButton" class="btn-primary" onclick="startGame()">🎮 Start Game</button>
+
+            <!-- Tabs: Leaderboard / Stats / Qbit Brain -->
+            <div class="info-tabs">
+                <button class="tab-btn active" data-tab="leaderboard">🏆 Leaderboard</button>
+                <button class="tab-btn" data-tab="stats">📊 Stats</button>
+                <button class="tab-btn" data-tab="qbitBrain">🧠 v0.1 Brain</button>
+                <button class="tab-btn" data-tab="qbitV02Brain">⚡ v0.2 Brain</button>
+            </div>
+
+            <!-- Leaderboard Panel -->
+            <div class="tab-panel" id="leaderboardPanel">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Score</th>
+                            <th>Diff</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <tr>
+                            <td colspan="5" class="empty-state">No scores yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn-sm btn-outline" onclick="clearLeaderboard()">Clear</button>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="tab-panel" id="statsPanel" style="display:none">
+                <div id="statsContent">
+                    <span class="empty-state">No stats yet — play a game!</span>
+                </div>
+                <button class="btn-sm btn-outline" onclick="clearStats()">Clear</button>
+            </div>
+
+            <!-- Bot Memory -->
+            <div class="bot-memory-section">
+                <button class="btn-sm btn-outline btn-danger-outline" onclick="clearBotMemory()">🧠 Clear Bot Memory</button>
+            </div>
+
+            <!-- Qbit Brain Panel -->
+            <div class="tab-panel" id="qbitBrainPanel" style="display:none">
+                <div class="brain-stats" id="brainStats"></div>
+                <div class="brain-section">
+                    <div class="brain-section-title">📊 Transition Matrix <span class="brain-subtitle">(first letter → last letter)</span></div>
+                    <div class="matrix-wrapper" id="matrixWrapper">
+                        <div class="matrix-container" id="matrixContainer">
+                            <span class="empty-state">No data yet — play some games!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="brain-section">
+                    <div class="brain-section-title">📚 Word Bank <span class="brain-subtitle" id="wordBankCount"></span></div>
+                    <div class="wordbank-container" id="wordBankContainer">
+                        <span class="empty-state">No words learned yet</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Qbit v0.2 Brain Panel -->
+            <div class="tab-panel" id="qbitV02BrainPanel" style="display:none">
+                <div class="brain-stats" id="v02BrainStats"></div>
+                <div class="brain-section">
+                    <div class="brain-section-title">⚡ Weighted Greedy Scoring <span class="brain-subtitle">(top picks per starting letter)</span></div>
+                    <div id="v02ScoringContainer">
+                        <span class="empty-state">No data yet — play some games!</span>
+                    </div>
+                </div>
+                <div class="brain-section">
+                    <div class="brain-section-title">⚖️ Weight Configuration</div>
+                    <div id="v02WeightsDisplay" class="brain-stats-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Area -->
+        <div id="gameArea" class="game-section" style="display: none;">
+
+            <!-- Player + Difficulty Badge -->
+            <div class="player-bar">
+                <span class="player-name" id="playerDisplay"></span>
+                <span class="difficulty-badge" id="difficultyBadge"></span>
+            </div>
+
+            <!-- PvP Scoreboard -->
+            <div class="pvp-scoreboard" id="pvpScoreboard" style="display:none">
+                <div class="pvp-player pvp-p1">
+                    <div class="pvp-name" id="p1Name">P1</div>
+                    <div class="pvp-score" id="p1Score">0</div>
+                </div>
+                <div class="pvp-vs">VS</div>
+                <div class="pvp-player pvp-p2">
+                    <div class="pvp-name" id="p2Name">P2</div>
+                    <div class="pvp-score" id="p2Score">0</div>
+                </div>
+            </div>
+
+            <!-- Current Turn (PvP) -->
+            <div class="current-turn" id="currentTurnDisplay" style="display:none">
+                🎯 <span id="currentTurnName"></span>'s turn
+            </div>
+            <!-- Stats -->
+            <div class="game-stats">
+                <div class="stat-box">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-label">Streak</div>
+                    <div class="stat-value" id="streakDisplay">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-label">Points</div>
+                    <div class="stat-value" id="pointsDisplay">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-label">High Score</div>
+                    <div class="stat-value" id="highScoreDisplay">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-label">Correct</div>
+                    <div class="stat-value" id="correctWordsCount">0</div>
+                </div>
+            </div>
+
+            <!-- Letter Frequency Chart -->
+            <div class="freq-chart-section" id="freqChartSection">
+                <div class="freq-chart-toggle"
+                    onclick="document.getElementById('freqChartSection').classList.toggle('open')">
+                    <span>📊 Letter Frequency</span>
+                    <span class="freq-chevron">▼</span>
+                </div>
+                <div class="freq-chart-body">
+                    <div class="freq-chart" id="freqChart"></div>
+                </div>
+            </div>
+            <!-- Used Words -->
+            <div class="used-words" id="usedWords">
+                <span class="empty-state">No words used yet</span>
+            </div>
+            <!-- Power-Ups -->
+            <div class="power-ups-bar" id="powerUpsBar">
+                <button class="power-up-btn" id="freezeBtn" onclick="useFreeze()" disabled title="Freeze timer for 10s">
+                    <span class="pu-icon">❄️</span>
+                    <span class="pu-count" id="freezeCount">0</span>
+                </button>
+                <button class="power-up-btn" id="doubleBtn" onclick="useDouble()" disabled
+                    title="Double points on next word">
+                    <span class="pu-icon">💎</span>
+                    <span class="pu-count" id="doubleCount">0</span>
+                </button>
+                <button class="power-up-btn" id="skipBtn" onclick="useSkip()" disabled
+                    title="Skip — new starting letter">
+                    <span class="pu-icon">🔄</span>
+                    <span class="pu-count" id="skipCount">0</span>
+                </button>
+                <button class="power-up-btn" id="letterPickBtn" onclick="useLetterPick()" disabled
+                    title="Choose Qbit's starting letter">
+                    <span class="pu-icon">🔤</span>
+                    <span class="pu-count" id="letterPickCount">0</span>
+                </button>
+            </div>
+
+
+            <!-- Timer -->
+            <div class="timer-box glass-card">
+                <div class="timer-label">Time Remaining</div>
+                <div id="timer" class="timer-value timer-ok">30s</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="game-controls">
+                <input type="text" id="wordInput" placeholder="Enter a word..." autocomplete="off" autocorrect="off"
+                    autocapitalize="off" spellcheck="false">
+                <button id="submitButton" class="btn-primary" onclick="submitWord()">Send</button>
+            </div>
+
+            <div id="hintGroup">
+                <button id="hintButton" class="btn-hint" onclick="getHint()">💡 Hint (−5 pts)</button>
+            </div>
+
+            <!-- Message -->
+            <div class="message" id="message"></div>
+
+            <!-- History -->
+            <div class="history" id="history">
+                <span class="empty-state">Game history will appear here</span>
+            </div>
+
+            <!-- End-game actions -->
+            <div class="end-game-actions" id="endGameActions">
+                <button class="btn-success" onclick="resetGame()">🔄 New Game</button>
+                <button class="btn-outline" onclick="generatePDF()">📄 Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2025 Word Chain Game</p>
+        <p>Developed by <a href="https://qknot.github.io/Portfolio/" target="_blank">Rahul Ghosh</a></p>
+    </footer>
+
+    <script src="aiLetterSelector.js"></script>
+    <script src="qbitMarkov.js"></script>
+    <script src="qbitWeightedGreedy.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
