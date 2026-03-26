@@ -43,7 +43,8 @@ const letterFreqTracker = new LetterFrequencyTracker();
 // Qbit v0.1 Markov Chain learning bot
 const qbitMarkov = new QbitMarkov();
 const qbitWeightedGreedy = new QbitWeightedGreedy();
-let selectedBot = 'classic'; // 'classic', 'qbit_v01', or 'qbit_v02'
+const qbitRL = new QbitRL();
+let selectedBot = 'classic'; // 'classic', 'qbit_v01', 'qbit_v02', or 'qbit_v03'
 let selectedBot1 = 'classic'; // Bot 1 for botvsbot mode
 let selectedBot2 = 'qbit_v02'; // Bot 2 for botvsbot mode
 
@@ -691,7 +692,10 @@ function setSelectedBot(bot) {
     const preview = document.getElementById('botSelectorPreview');
     const trainingSection = document.getElementById('trainingSourceSection');
     if (preview) {
-        if (bot === 'qbit_v02') {
+        if (bot === 'qbit_v03') {
+            const rlStats = qbitRL.getStats();
+            preview.innerHTML = `🎯 RL Agent — ${rlStats.episodes} episodes, ε=${rlStats.epsilon.toFixed(3)}`;
+        } else if (bot === 'qbit_v02') {
             const stats = qbitMarkov.getStats();
             preview.innerHTML = `⚡ Weighted Greedy — ${stats.totalWords} words learned, ${stats.totalTransitions} transitions`;
         } else if (bot === 'qbit_v01') {
@@ -723,7 +727,8 @@ function getBotDisplayName(botId) {
     const names = {
         'classic': 'Qbit Classic',
         'qbit_v01': 'Qbit v0.1',
-        'qbit_v02': 'Qbit v0.2'
+        'qbit_v02': 'Qbit v0.2',
+        'qbit_v03': 'Qbit v0.3'
     };
     return names[botId] || 'Qbit';
 }
@@ -1058,6 +1063,11 @@ function handleTimeout() {
         launchConfetti(2000, 0.5);
     } else {
         showMessage("⏰ Time's up! Qbit wins!", 'error');
+        // RL: reward the bot for winning (opponent timed out)
+        if (selectedBot === 'qbit_v03' && lastWord) {
+            qbitRL.onOpponentFailed(lastWord[lastWord.length - 1]);
+            qbitRL.onGameEnd(true);
+        }
         updateStatsAfterGame(false);
         saveToLeaderboard(playerName, pointsEarned, getDiffConfig().label, totalCorrectWords);
     }
@@ -1176,6 +1186,17 @@ async function getQbitWord(lastLetter) {
             return greedyWord;
         }
         console.log(`⚡ Qbit v0.2: No match for '${lastLetter}' — giving up`);
+        return null;
+    }
+
+    // ── Qbit v0.3 Reinforcement Learning strategy ──────────────────────
+    if (selectedBot === 'qbit_v03') {
+        const rlWord = qbitRL.selectWord(lastLetter, usedWords, effectiveMinLen, qbitMarkov);
+        if (rlWord) {
+            console.log(`🎯 Qbit v0.3: RL selected "${rlWord}" (${lastLetter} → ${rlWord[rlWord.length - 1]}, ε=${qbitRL.epsilon.toFixed(3)})`);
+            return rlWord;
+        }
+        console.log(`🎯 Qbit v0.3: No RL match for '${lastLetter}' — giving up`);
         return null;
     }
 
@@ -1504,7 +1525,7 @@ function handleQbitTurn(qbitWord) {
     if (qbitWord) {
         lastWord = qbitWord;
         usedWords.add(qbitWord);
-        const qbitLabel = selectedBot === 'qbit_v02' ? 'Qbit v0.2' : selectedBot === 'qbit_v01' ? 'Qbit v0.1' : 'Qbit';
+        const qbitLabel = selectedBot === 'qbit_v03' ? 'Qbit v0.3' : selectedBot === 'qbit_v02' ? 'Qbit v0.2' : selectedBot === 'qbit_v01' ? 'Qbit v0.1' : 'Qbit';
         gameHistory.push({ player: qbitLabel, word: qbitWord, points: 0 });
         // Track Qbit's starting letter for AI frequency balancing
         letterFreqTracker.recordLetter(qbitWord[0]);
@@ -1512,6 +1533,14 @@ function handleQbitTurn(qbitWord) {
         // Markov learning — gated by training source setting
         qbitLearn(qbitWord, 'bot');
         playQbitSound();
+
+        // RL reward: bot successfully played a word
+        if (selectedBot === 'qbit_v03') {
+            const endChar = qbitWord[qbitWord.length - 1];
+            const opponentOptions = (qbitMarkov.wordBank[endChar] || []).length;
+            qbitRL.onWordPlayed(qbitWord[0], endChar, opponentOptions);
+        }
+
         showMessage(`🤖 ${qbitLabel} plays: <strong>${qbitWord}</strong>`, 'qbit');
         updateUsedWordsDisplay();
         resetTimer();
@@ -1521,8 +1550,14 @@ function handleQbitTurn(qbitWord) {
         wordInput.focus();
     } else {
         // Player wins
-        const qbitLabel = selectedBot === 'qbit_v02' ? 'Qbit v0.2' : selectedBot === 'qbit_v01' ? 'Qbit v0.1' : 'Qbit';
+        const qbitLabel = selectedBot === 'qbit_v03' ? 'Qbit v0.3' : selectedBot === 'qbit_v02' ? 'Qbit v0.2' : selectedBot === 'qbit_v01' ? 'Qbit v0.1' : 'Qbit';
         showMessage(`🎉 ${qbitLabel} couldn't find a word — You win!`, 'success');
+
+        // RL: penalize the bot for failing
+        if (selectedBot === 'qbit_v03' && lastWord) {
+            qbitRL.onBotFailed(lastWord[lastWord.length - 1]);
+            qbitRL.onGameEnd(false);
+        }
         gameActive = false;
         clearInterval(timerInterval);
         playWinSound();
@@ -1579,6 +1614,8 @@ function resetGame() {
 function resetGameState() {
     gameHistory = [];
     usedWords = new Set();
+    // Reset RL per-game transient state
+    qbitRL.resetGameState();
     lastWord = '';
     isProcessing = false;
     totalCorrectWords = 0;
@@ -1971,6 +2008,204 @@ function renderQbitV02Brain() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// QBIT v0.3 BRAIN — Reinforcement Learning Q-Table Visualization
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function renderQbitV03Brain() {
+    const stats = qbitRL.getStats();
+    const qTable = qbitRL.getQTable();
+
+    // ── Stats summary ──
+    const statsEl = document.getElementById('v03BrainStats');
+    if (statsEl) {
+        const explorationPct = (stats.epsilon * 100).toFixed(1);
+        const exploitPct = (100 - stats.epsilon * 100).toFixed(1);
+        statsEl.innerHTML = `
+            <div class="brain-stats-grid">
+                <div class="brain-stat">
+                    <div class="brain-stat-value">${stats.episodes}</div>
+                    <div class="brain-stat-label">Episodes</div>
+                </div>
+                <div class="brain-stat">
+                    <div class="brain-stat-value">${stats.avgReward.toFixed(1)}</div>
+                    <div class="brain-stat-label">Avg Reward</div>
+                </div>
+                <div class="brain-stat">
+                    <div class="brain-stat-value">${stats.learnedPairs}</div>
+                    <div class="brain-stat-label">Learned Pairs</div>
+                </div>
+                <div class="brain-stat">
+                    <div class="brain-stat-value rl-explore-value">
+                        <div class="rl-epsilon-bar">
+                            <div class="rl-epsilon-fill" style="width:${exploitPct}%"></div>
+                        </div>
+                        <span>${explorationPct}%</span>
+                    </div>
+                    <div class="brain-stat-label">Exploration (ε)</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ── Hyperparameters ──
+    const hyperEl = document.getElementById('v03HyperParams');
+    if (hyperEl) {
+        hyperEl.innerHTML = `
+            <div class="brain-stat">
+                <div class="brain-stat-value" style="color:#fb923c">α = ${stats.alpha}</div>
+                <div class="brain-stat-label">Learning Rate</div>
+            </div>
+            <div class="brain-stat">
+                <div class="brain-stat-value" style="color:#a78bfa">γ = ${stats.gamma}</div>
+                <div class="brain-stat-label">Discount Factor</div>
+            </div>
+            <div class="brain-stat">
+                <div class="brain-stat-value" style="color:#22d3ee">ε = ${stats.epsilon.toFixed(4)}</div>
+                <div class="brain-stat-label">Exploration Rate</div>
+            </div>
+        `;
+    }
+
+    // ── Q-Table Heatmap ──
+    const qtContainer = document.getElementById('v03QTableContainer');
+    if (qtContainer) {
+        // Find max absolute value for color scaling
+        let maxAbs = 0;
+        for (let i = 0; i < 26; i++) {
+            for (let j = 0; j < 26; j++) {
+                const abs = Math.abs(qTable[i][j]);
+                if (abs > maxAbs) maxAbs = abs;
+            }
+        }
+
+        if (maxAbs === 0) {
+            qtContainer.innerHTML = '<span class="empty-state">No Q-values yet — play some games with v0.3!</span>';
+        } else {
+            let html = '<table class="matrix-table rl-qtable">';
+
+            // Header row — action (ending letters)
+            html += '<thead><tr><th class="matrix-corner">S\\A</th>';
+            for (let j = 0; j < 26; j++) {
+                html += `<th class="matrix-header">${String.fromCharCode(65 + j)}</th>`;
+            }
+            html += '</tr></thead><tbody>';
+
+            // Data rows
+            for (let i = 0; i < 26; i++) {
+                const stateLetter = String.fromCharCode(65 + i);
+                html += `<tr><th class="matrix-row-header">${stateLetter}</th>`;
+                for (let j = 0; j < 26; j++) {
+                    const val = qTable[i][j];
+                    const actionLetter = String.fromCharCode(97 + j);
+                    const title = `Q(${stateLetter.toLowerCase()}→${actionLetter}) = ${val.toFixed(3)}`;
+
+                    let cellClass = 'matrix-cell';
+                    let bg = '';
+                    if (val !== 0) {
+                        const intensity = Math.abs(val) / maxAbs;
+                        if (val > 0) {
+                            // Positive: green-teal gradient
+                            const hue = 140 + (30 * intensity);
+                            const sat = 50 + (40 * intensity);
+                            const light = 15 + (35 * intensity);
+                            const alpha = 0.3 + (0.7 * intensity);
+                            bg = `background: hsla(${hue}, ${sat}%, ${light}%, ${alpha});`;
+                            if (intensity > 0.8) cellClass += ' rl-cell-hot';
+                        } else {
+                            // Negative: red-orange gradient
+                            const hue = 0 + (20 * intensity);
+                            const sat = 50 + (40 * intensity);
+                            const light = 15 + (30 * intensity);
+                            const alpha = 0.3 + (0.7 * intensity);
+                            bg = `background: hsla(${hue}, ${sat}%, ${light}%, ${alpha});`;
+                            if (intensity > 0.8) cellClass += ' rl-cell-cold';
+                        }
+                    }
+
+                    const display = val !== 0 ? val.toFixed(1) : '';
+                    html += `<td class="${cellClass}" style="${bg}" title="${title}">${display}</td>`;
+                }
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
+            qtContainer.innerHTML = html;
+        }
+    }
+
+    // ── Top Strategic Pairs ──
+    const topPairsEl = document.getElementById('v03TopPairs');
+    if (topPairsEl) {
+        if (stats.topPairs.length === 0) {
+            topPairsEl.innerHTML = '<span class="empty-state">No strategic data yet</span>';
+        } else {
+            let html = '<div class="rl-pairs-grid">';
+
+            // Best moves
+            html += '<div class="rl-pairs-section">';
+            html += '<div class="rl-pairs-title rl-good">🏆 Best Moves</div>';
+            stats.topPairs.forEach((pair, i) => {
+                const barWidth = stats.maxQ > 0 ? (pair.qValue / stats.maxQ) * 100 : 0;
+                html += `<div class="rl-pair-item">`;
+                html += `<div class="rl-pair-rank">${i + 1}</div>`;
+                html += `<div class="rl-pair-info">`;
+                html += `<div class="rl-pair-label">${pair.from.toUpperCase()} → ${pair.to.toUpperCase()}</div>`;
+                html += `<div class="rl-pair-bar-bg"><div class="rl-pair-bar rl-bar-good" style="width:${Math.max(barWidth, 4)}%"></div></div>`;
+                html += `<div class="rl-pair-qval">Q = ${pair.qValue.toFixed(3)}</div>`;
+                html += `</div></div>`;
+            });
+            html += '</div>';
+
+            // Worst moves
+            if (stats.worstPairs.length > 0 && stats.worstPairs[0].qValue < 0) {
+                html += '<div class="rl-pairs-section">';
+                html += '<div class="rl-pairs-title rl-bad">⚠️ Avoid Moves</div>';
+                stats.worstPairs.filter(p => p.qValue < 0).forEach((pair, i) => {
+                    const barWidth = stats.minQ < 0 ? (Math.abs(pair.qValue) / Math.abs(stats.minQ)) * 100 : 0;
+                    html += `<div class="rl-pair-item">`;
+                    html += `<div class="rl-pair-rank rl-rank-bad">${i + 1}</div>`;
+                    html += `<div class="rl-pair-info">`;
+                    html += `<div class="rl-pair-label">${pair.from.toUpperCase()} → ${pair.to.toUpperCase()}</div>`;
+                    html += `<div class="rl-pair-bar-bg"><div class="rl-pair-bar rl-bar-bad" style="width:${Math.max(barWidth, 4)}%"></div></div>`;
+                    html += `<div class="rl-pair-qval rl-qval-bad">Q = ${pair.qValue.toFixed(3)}</div>`;
+                    html += `</div></div>`;
+                });
+                html += '</div>';
+            }
+
+            html += '</div>';
+            topPairsEl.innerHTML = html;
+        }
+    }
+
+    // ── Reward History Chart ──
+    const chartEl = document.getElementById('v03RewardChart');
+    if (chartEl) {
+        const history = qbitRL.rewardHistory;
+        if (history.length === 0) {
+            chartEl.innerHTML = '<span class="empty-state">No episodes yet</span>';
+        } else {
+            const maxReward = Math.max(...history.map(Math.abs), 1);
+            let html = '<div class="rl-chart-bars">';
+            history.forEach((reward, i) => {
+                const pct = (Math.abs(reward) / maxReward) * 100;
+                const isPositive = reward >= 0;
+                const barClass = isPositive ? 'rl-chart-bar-pos' : 'rl-chart-bar-neg';
+                html += `<div class="rl-chart-col" title="Episode ${i + 1}: ${reward.toFixed(1)}">`;
+                html += `<div class="rl-chart-bar ${barClass}" style="height:${Math.max(pct, 3)}%"></div>`;
+                html += `</div>`;
+            });
+            html += '</div>';
+            html += `<div class="rl-chart-labels">`;
+            html += `<span>Episode 1</span>`;
+            html += `<span>Episode ${history.length}</span>`;
+            html += `</div>`;
+            chartEl.innerHTML = html;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TABS (leaderboard / stats / qbit brain)
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1987,6 +2222,9 @@ function switchTab(tabName) {
     }
     if (tabName === 'qbitV02Brain') {
         renderQbitV02Brain();
+    }
+    if (tabName === 'qbitV03Brain') {
+        renderQbitV03Brain();
     }
 }
 

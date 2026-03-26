@@ -68,6 +68,7 @@
                     <option value="classic">🤖 Qbit Classic</option>
                     <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
                     <option value="qbit_v02">⚡ Qbit v0.2 (Weighted Greedy)</option>
+                    <option value="qbit_v03">🎯 Qbit v0.3 (RL)</option>
                 </select>
                 <div id="botSelectorPreview" class="field-preview">🤖 Classic API-based bot</div>
             </div>
@@ -79,6 +80,7 @@
                         <option value="classic">🤖 Qbit Classic</option>
                         <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
                         <option value="qbit_v02">⚡ Qbit v0.2 (Weighted Greedy)</option>
+                        <option value="qbit_v03">🎯 Qbit v0.3 (RL)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -87,6 +89,7 @@
                         <option value="classic">🤖 Qbit Classic</option>
                         <option value="qbit_v01">🧠 Qbit v0.1 (Learning)</option>
                         <option value="qbit_v02" selected>⚡ Qbit v0.2 (Weighted Greedy)</option>
+                        <option value="qbit_v03">🎯 Qbit v0.3 (RL)</option>
                     </select>
                 </div>
             </div>
@@ -145,6 +148,7 @@
                 <button class="tab-btn" data-tab="stats">📊 Stats</button>
                 <button class="tab-btn" data-tab="qbitBrain">🧠 v0.1 Brain</button>
                 <button class="tab-btn" data-tab="qbitV02Brain">⚡ v0.2 Brain</button>
+                <button class="tab-btn" data-tab="qbitV03Brain">🎯 v0.3 Brain</button>
             </div>
 
             <!-- Leaderboard Panel -->
@@ -212,6 +216,35 @@
                 <div class="brain-section">
                     <div class="brain-section-title">⚖️ Weight Configuration</div>
                     <div id="v02WeightsDisplay" class="brain-stats-grid"></div>
+                </div>
+            </div>
+
+            <!-- Qbit v0.3 RL Brain Panel -->
+            <div class="tab-panel" id="qbitV03BrainPanel" style="display:none">
+                <div class="brain-stats" id="v03BrainStats"></div>
+                <div class="brain-section">
+                    <div class="brain-section-title">🧮 Hyperparameters</div>
+                    <div id="v03HyperParams" class="brain-stats-grid"></div>
+                </div>
+                <div class="brain-section">
+                    <div class="brain-section-title">🎯 Q-Table <span class="brain-subtitle">(state → action values)</span></div>
+                    <div class="matrix-wrapper" id="v03MatrixWrapper">
+                        <div class="matrix-container" id="v03QTableContainer">
+                            <span class="empty-state">No data yet — play some games with v0.3!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="brain-section">
+                    <div class="brain-section-title">🏆 Top Strategic Pairs <span class="brain-subtitle">(highest Q-values)</span></div>
+                    <div id="v03TopPairs">
+                        <span class="empty-state">No data yet</span>
+                    </div>
+                </div>
+                <div class="brain-section">
+                    <div class="brain-section-title">📉 Reward History <span class="brain-subtitle">(last 100 episodes)</span></div>
+                    <div id="v03RewardChart" class="rl-reward-chart">
+                        <span class="empty-state">No episodes yet</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -346,6 +379,7 @@
     <script src="aiLetterSelector.js"></script>
     <script src="qbitMarkov.js"></script>
     <script src="qbitWeightedGreedy.js"></script>
+    <script src="qbitRL.js"></script>
     <script src="script.js"></script>
 </body>
 

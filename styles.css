@@ -1744,3 +1744,226 @@ button:disabled {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   QBIT v0.3 — Reinforcement Learning Brain Styles
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ─── RL Q-Table Heatmap ──────────────────────────────────────────────────── */
+.rl-qtable .matrix-header {
+  color: #4ade80;
+}
+
+.rl-qtable .matrix-row-header {
+  color: #fb923c;
+}
+
+.rl-qtable .matrix-corner {
+  font-size: 0.5rem;
+  color: var(--text-muted);
+}
+
+.rl-cell-hot {
+  color: #fff !important;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+}
+
+.rl-cell-cold {
+  color: #fff !important;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+}
+
+/* ─── Epsilon Progress Bar ────────────────────────────────────────────────── */
+.rl-explore-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.rl-epsilon-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.rl-epsilon-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #fb923c, #4ade80);
+  transition: width 0.5s ease;
+}
+
+/* ─── Top/Worst Strategic Pairs ───────────────────────────────────────────── */
+.rl-pairs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 500px) {
+  .rl-pairs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rl-pairs-section {
+  background: rgba(0, 0, 0, 0.15);
+  border: var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+
+.rl-pairs-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rl-pairs-title.rl-good {
+  color: #4ade80;
+}
+
+.rl-pairs-title.rl-bad {
+  color: #f87171;
+}
+
+.rl-pair-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  transition: background 0.2s;
+  margin-bottom: 4px;
+}
+
+.rl-pair-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rl-pair-rank {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.rl-pair-item:first-child .rl-pair-rank {
+  background: linear-gradient(135deg, #22c55e, #4ade80);
+  color: #fff;
+}
+
+.rl-rank-bad {
+  background: rgba(248, 113, 113, 0.2) !important;
+  color: #f87171 !important;
+}
+
+.rl-pair-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rl-pair-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+  letter-spacing: 0.03em;
+}
+
+.rl-pair-bar-bg {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  margin-bottom: 3px;
+  overflow: hidden;
+}
+
+.rl-pair-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.rl-bar-good {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.rl-bar-bad {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.rl-pair-qval {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #4ade80;
+  font-family: var(--font);
+}
+
+.rl-qval-bad {
+  color: #f87171 !important;
+}
+
+/* ─── Reward History Chart ────────────────────────────────────────────────── */
+.rl-reward-chart {
+  border: var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.15);
+  padding: 12px;
+}
+
+.rl-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100px;
+  padding-bottom: 4px;
+}
+
+.rl-chart-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  cursor: default;
+}
+
+.rl-chart-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.rl-chart-bar-pos {
+  background: linear-gradient(180deg, #4ade80, rgba(74, 222, 128, 0.3));
+}
+
+.rl-chart-bar-neg {
+  background: linear-gradient(180deg, #f87171, rgba(248, 113, 113, 0.3));
+}
+
+.rl-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
